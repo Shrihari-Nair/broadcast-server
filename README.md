@@ -14,6 +14,7 @@ This is a **broadcast server** - think of it like a chat room where:
 - ✅ **Real-time messaging** - Messages appear instantly
 - ✅ **Multiple clients** - Many people can connect at once
 - ✅ **Simple CLI interface** - Easy to use from the command line
+- ✅ **Automated testing** - Comprehensive examples demonstrating all features
 - ✅ **Graceful handling** - Handles connections and disconnections properly
 - ✅ **Error handling** - Robust error handling and recovery
 - ✅ **Cross-platform** - Works on Windows, Mac, and Linux
@@ -120,6 +121,20 @@ When connected as a client, you can use these commands:
 - `status` - Show connection status
 - `quit` or `exit` - Disconnect from server
 
+### Quick Testing
+
+Want to see the broadcast server in action quickly? Run:
+
+```bash
+# See multi-client broadcasting demo
+node -e "require('./example.js').example2()"
+
+# Or run all examples
+node example.js
+```
+
+This will automatically demonstrate real-time messaging between multiple clients!
+
 ## 🔧 Configuration Options
 
 ### Server Options
@@ -178,7 +193,7 @@ When connected as a client, you can use these commands:
 
 ## 🧪 Testing the Server
 
-### Test with Multiple Clients
+### Method 1: Manual Testing with Multiple Terminals
 
 1. **Start the server** in one terminal:
    ```bash
@@ -199,12 +214,56 @@ When connected as a client, you can use these commands:
 
 3. **Send messages** from any client and watch them appear in all other clients
 
+### Method 2: Automated Testing with Examples
+
+The project includes comprehensive automated tests that demonstrate all features:
+
+#### **Run All Examples (Recommended)**
+```bash
+node example.js
+```
+This runs 4 different scenarios automatically:
+- **Example 1**: Single client connection and messaging
+- **Example 2**: Multi-client broadcasting with real-time chat simulation
+- **Example 3**: Client join/leave scenarios
+- **Example 4**: Custom message handling
+
+#### **Run Individual Examples**
+```bash
+# Multi-client broadcasting demo (main feature)
+node -e "require('./example.js').example2()"
+
+# Client join/leave simulation
+node -e "require('./example.js').example3()"
+
+# Custom message handling
+node -e "require('./example.js').example4()"
+```
+
+#### **Example Output**
+```
+=== Example 2: Multi-Client Broadcasting Demo ===
+🔗 Connecting Client 1...
+🔗 Connecting Client 2...
+🔗 Connecting Client 3...
+
+💬 Client 1: "Hello everyone! How are you doing?"
+📨 [Client2] Received: "Hello everyone! How are you doing?" from ::ffff:127.0.0.1:60010
+📨 [Client3] Received: "Hello everyone! How are you doing?" from ::ffff:127.0.0.1:60010
+
+💬 Client 2: "Hi there! I'm doing great, thanks!"
+📨 [Client1] Received: "Hi there! I'm doing great, thanks!" from ::ffff:127.0.0.1:60026
+📨 [Client3] Received: "Hi there! I'm doing great, thanks!" from ::ffff:127.0.0.1:60026
+```
+
 ### Expected Behavior
 
 - ✅ All clients should connect successfully
 - ✅ Messages from one client should appear in all other clients
 - ✅ System messages should show when clients join/leave
 - ✅ Clients should disconnect gracefully when you type "quit"
+- ✅ Real-time broadcasting with instant message delivery
+- ✅ Proper client management (join/leave notifications)
 
 ## 🐛 Troubleshooting
 
@@ -253,6 +312,7 @@ To see more detailed logs, you can modify the server code to add more console.lo
 broadcast-server/
 ├── package.json          # Project configuration and dependencies
 ├── README.md            # This file
+├── example.js           # Comprehensive testing examples
 ├── .gitignore           # Git ignore rules
 ├── bin/
 │   └── broadcast-server # CLI executable
@@ -261,6 +321,29 @@ broadcast-server/
     ├── client.js        # WebSocket client implementation
     └── cli.js          # Command-line interface
 ```
+
+### Key Files Explained
+
+1. **`example.js`** - Comprehensive testing suite
+   - Demonstrates single client, multi-client, and join/leave scenarios
+   - Shows real-time broadcasting in action
+   - Includes custom message handling examples
+   - Perfect for learning how the system works
+
+2. **`src/server.js`** - WebSocket server implementation
+   - Handles client connections and disconnections
+   - Manages message broadcasting
+   - Maintains client list and connection state
+
+3. **`src/client.js`** - WebSocket client implementation
+   - Connects to the broadcast server
+   - Sends and receives messages
+   - Provides interactive command-line interface
+
+4. **`src/cli.js`** - Command-line interface
+   - Parses user commands (`start`, `connect`)
+   - Handles command-line options (port, server URL)
+   - Routes to appropriate server or client functionality
 
 ## 🚀 Next Steps
 
