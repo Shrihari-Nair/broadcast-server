@@ -1,0 +1,30 @@
+{
+  "name": "broadcast-server",
+  "version": "1.0.0",
+  "description": "A real-time broadcast server that allows clients to connect and send messages to all connected clients",
+  "main": "src/cli.js",
+  "bin": {
+    "broadcast-server": "./bin/broadcast-server"
+  },
+  "scripts": {
+    "start": "node src/cli.js start",
+    "connect": "node src/cli.js connect",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "websocket",
+    "broadcast",
+    "real-time",
+    "chat",
+    "server"
+  ],
+  "author": "Shrihari",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.2",
+    "commander": "^11.1.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+} 
