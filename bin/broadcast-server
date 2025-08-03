@@ -1,0 +1,15 @@
+#!/usr/bin/env node
+
+/**
+ * Broadcast Server CLI Executable
+ * 
+ * This file is the entry point for the broadcast-server command.
+ * It allows users to run commands like:
+ * - broadcast-server start
+ * - broadcast-server connect
+ * 
+ * The shebang (#!/usr/bin/env node) tells the system to run this file with Node.js
+ */
+
+// Import the main CLI module
+require('../src/cli.js'); 
