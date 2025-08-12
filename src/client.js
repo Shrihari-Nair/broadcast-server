@@ -1,67 +1,43 @@
 /**
  * ============================================================================
- * BROADCAST CLIENT IMPLEMENTATION
+ * ENHANCED BROADCAST CLIENT IMPLEMENTATION
  * ============================================================================
  * 
- * This module contains the WebSocket client that connects to the broadcast server
- * and provides an interactive interface for real-time messaging.
+ * This module contains the WebSocket client that connects to the enhanced broadcast server
+ * and provides an interactive interface for real-time messaging with authentication.
  * 
  * 🎯 WHAT THIS CLIENT DOES:
- * 1. Connects to a WebSocket broadcast server
- * 2. Provides an interactive command-line interface for users
- * 3. Sends messages to the server for broadcasting to other clients
- * 4. Receives and displays messages from other clients in real-time
- * 5. Handles connection status, errors, and graceful disconnection
- * 6. Provides built-in commands (help, status, quit)
+ * 1. Connects to a WebSocket broadcast server with authentication
+ * 2. Provides user registration and login functionality
+ * 3. Handles JWT token management and session persistence
+ * 4. Provides an interactive command-line interface for users
+ * 5. Sends messages to the server for broadcasting to other clients
+ * 6. Receives and displays messages from other clients in real-time
+ * 7. Handles connection status, errors, and graceful disconnection
+ * 8. Provides enhanced commands (help, status, quit, history, online-users)
+ * 9. Displays message history and online user information
  * 
- * 🔑 KEY CONCEPTS EXPLAINED:
- * 
- * WebSocket Client:
- * - Think of this as the "phone" that connects to the server
- * - It establishes a persistent connection to the broadcast server
- * - Can send messages anytime and receive messages instantly
- * - Unlike regular web requests, the connection stays open
- * 
- * Interactive Command-Line Interface:
- * - Users can type messages and press Enter to send them
- * - The interface continuously listens for user input
- * - Provides real-time feedback and message display
- * - Supports special commands like 'help', 'status', 'quit'
- * 
- * Event-Driven Programming:
- * - The client responds to events like connection open, message received, etc.
- * - Instead of constantly checking for new messages, it waits for events
- * - This makes the application responsive and efficient
- * 
- * Readline Interface:
- * - A Node.js module that provides interactive input/output
- * - Allows reading user input from the command line
- * - Handles special keys like Ctrl+C gracefully
- * - Provides a prompt for user interaction
- * 
- * Message Types:
- * - 'broadcast': Messages from other clients
- * - 'system': Server notifications (welcome, join/leave)
- * - 'confirmation': Success confirmations for sent messages
- * - 'error': Error messages from the server
+ * 🔑 NEW FEATURES:
+ * - User authentication (register/login)
+ * - JWT token management
+ * - Message history retrieval
+ * - Online user list
+ * - Enhanced user experience
  */
 
 // Import required Node.js modules
-// The 'ws' library provides WebSocket client functionality
-// The 'readline' module provides interactive command-line interface
 const WebSocket = require('ws');
 const readline = require('readline');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * ============================================================================
- * BROADCASTCLIENT CLASS
+ * ENHANCED BROADCASTCLIENT CLASS
  * ============================================================================
  * 
- * This class is like a "smart phone" that connects to the broadcast server.
- * It handles all the client-side functionality including connection management,
- * message sending/receiving, and user interaction.
- * 
- * Think of it as a complete messaging app that runs in the command line.
+ * This class extends the original broadcast client with authentication
+ * and enhanced messaging capabilities.
  */
 class BroadcastClient {
     
@@ -70,16 +46,7 @@ class BroadcastClient {
      * CONSTRUCTOR - THE INITIALIZATION FUNCTION
      * ============================================================================
      * 
-     * The constructor sets up everything the client needs to work.
-     * It's like turning on a phone and preparing it for use.
-     * 
      * @param {string} serverUrl - The WebSocket URL to connect to (default: ws://localhost:8080)
-     * 
-     * What is a WebSocket URL?
-     * - ws://localhost:8080 means "connect to WebSocket server on localhost, port 8080"
-     * - ws:// is the WebSocket protocol (like http:// for web pages)
-     * - localhost means "this computer" (127.0.0.1)
-     * - 8080 is the port number where the server is listening
      */
     constructor(serverUrl = 'ws://localhost:8080') {
         // Store the server URL for later use
@@ -90,27 +57,28 @@ class BroadcastClient {
         
         // Track connection status
         this.isConnected = false;
+        this.isAuthenticated = false;
+        
+        // User information
+        this.user = null;
+        this.token = null;
         
         // Client identifier (set by server when we connect)
         this.clientId = null;
         
-        // ============================================================================
-        // CREATING THE READLINE INTERFACE
-        // ============================================================================
-        // 
-        // Readline is like creating a "chat window" in the command line
-        // It allows users to type messages and see responses
+        // Message history
+        this.messageHistory = [];
+        
+        // Online users
+        this.onlineUsers = [];
+        
+        // Create the readline interface
         this.rl = readline.createInterface({
-            input: process.stdin,   // Read from keyboard input
-            output: process.stdout  // Write to screen output
+            input: process.stdin,
+            output: process.stdout
         });
         
-        // ============================================================================
-        // BINDING EVENT HANDLERS - CRITICAL FOR 'THIS' CONTEXT
-        // ============================================================================
-        // 
-        // When these functions are called as event handlers, we want 'this' to refer
-        // to our BroadcastClient instance, not the event emitter
+        // Bind event handlers
         this.handleOpen = this.handleOpen.bind(this);
         this.handleMessage = this.handleMessage.bind(this);
         this.handleClose = this.handleClose.bind(this);
@@ -124,43 +92,18 @@ class BroadcastClient {
      * ============================================================================
      * CONNECT - ESTABLISHING THE CONNECTION
      * ============================================================================
-     * 
-     * This method creates the WebSocket connection to the server.
-     * Think of it as "dialing the phone number" to connect to the server.
      */
     connect() {
-        // ============================================================================
-        // ERROR HANDLING WITH TRY-CATCH
-        // ============================================================================
-        // 
-        // We wrap the connection attempt in try-catch to handle any errors
-        // that might occur during the connection process
         try {
-            // ============================================================================
-            // CREATING THE WEBSOCKET CONNECTION
-            // ============================================================================
-            // 
-            // This creates a new WebSocket connection to the specified server
-            // It's like creating a new phone call
+            // Create a new WebSocket connection to the specified server
             this.ws = new WebSocket(this.serverUrl);
             
-            // ============================================================================
-            // SETTING UP EVENT LISTENERS
-            // ============================================================================
-            // 
-            // We set up listeners for various events that might occur
-            // This is like setting up call waiting, voicemail, etc.
+            // Set up event listeners
             this.setupEventListeners();
             
         } catch (error) {
-            // ============================================================================
-            // HANDLING CONNECTION ERRORS
-            // ============================================================================
-            // 
-            // If something goes wrong during connection setup, we log the error
-            // and exit the program with an error code
             console.error('❌ Failed to create WebSocket connection:', error.message);
-            process.exit(1);  // Exit with error code 1
+            process.exit(1);
         }
     }
     
@@ -168,48 +111,18 @@ class BroadcastClient {
      * ============================================================================
      * SETUP EVENT LISTENERS - THE "LISTENING" FUNCTION
      * ============================================================================
-     * 
-     * This function sets up all the event listeners for the WebSocket connection.
-     * Think of it as setting up all the features on your phone (call waiting,
-     * voicemail, text messaging, etc.).
-     * 
-     * WebSocket connections have several important events:
-     * - 'open': Fired when the connection is successfully established
-     * - 'message': Fired when a message is received from the server
-     * - 'close': Fired when the connection is closed (by server or client)
-     * - 'error': Fired when an error occurs during the connection
      */
     setupEventListeners() {
-        // ============================================================================
-        // CONNECTION ESTABLISHED EVENT
-        // ============================================================================
-        // 
-        // This event fires when we successfully connect to the server
-        // It's like hearing "Hello?" when someone answers your phone call
+        // Connection established event
         this.ws.on('open', this.handleOpen);
         
-        // ============================================================================
-        // MESSAGE RECEIVED EVENT
-        // ============================================================================
-        // 
-        // This event fires whenever we receive a message from the server
-        // It's like receiving a text message or hearing someone speak
+        // Message received event
         this.ws.on('message', this.handleMessage);
         
-        // ============================================================================
-        // CONNECTION CLOSED EVENT
-        // ============================================================================
-        // 
-        // This event fires when the connection is closed
-        // It's like when someone hangs up the phone
+        // Connection closed event
         this.ws.on('close', this.handleClose);
         
-        // ============================================================================
-        // ERROR EVENT
-        // ============================================================================
-        // 
-        // This event fires when something goes wrong with the connection
-        // It's like when the call gets disconnected due to poor signal
+        // Error event
         this.ws.on('error', this.handleError);
     }
     
@@ -217,36 +130,16 @@ class BroadcastClient {
      * ============================================================================
      * HANDLE OPEN - CONNECTION SUCCESSFULLY ESTABLISHED
      * ============================================================================
-     * 
-     * This function is called when we successfully connect to the server.
-     * Think of it as the "Hello, I'm here!" moment when you successfully
-     * connect to someone on the phone.
      */
     handleOpen() {
-        // ============================================================================
-        // UPDATING CONNECTION STATUS
-        // ============================================================================
-        // 
-        // We mark ourselves as connected so other parts of the code know
-        // that we have an active connection
         this.isConnected = true;
         
-        // ============================================================================
-        // DISPLAYING CONNECTION SUCCESS
-        // ============================================================================
-        // 
-        // We show the user that we're connected and provide instructions
-        console.log('✅ Connected to broadcast server!');
-        console.log('💡 Type your messages and press Enter to send them.');
-        console.log('💡 Type "quit" or "exit" to disconnect.');
-        console.log('─'.repeat(50));  // Create a visual separator line
+        console.log('✅ Connected to enhanced broadcast server!');
+        console.log('🔐 Authentication required to join the chat');
+        console.log('💡 Type "help" to see available commands');
+        console.log('─'.repeat(50));
         
-        // ============================================================================
-        // STARTING USER INTERACTION
-        // ============================================================================
-        // 
-        // Now that we're connected, we start listening for user input
-        // This is like starting to listen for what the user wants to say
+        // Start user interaction
         this.startInputListener();
     }
     
@@ -255,45 +148,18 @@ class BroadcastClient {
      * HANDLE MESSAGE - PROCESSING INCOMING MESSAGES
      * ============================================================================
      * 
-     * This function is called whenever we receive a message from the server.
-     * Think of it as the "message processing center" that handles all incoming mail.
-     * 
      * @param {Buffer|string} data - The raw message data from the server
      */
     handleMessage(data) {
-        // ============================================================================
-        // ERROR HANDLING WITH TRY-CATCH
-        // ============================================================================
-        // 
-        // We wrap message processing in try-catch to handle any errors
-        // that might occur while processing the message
         try {
-            // ============================================================================
-            // CONVERTING RAW DATA TO STRING
-            // ============================================================================
-            // 
-            // WebSocket messages can come as Buffer (binary data) or string
-            // We convert everything to string for easier processing
             const messageString = data.toString();
             
-            // ============================================================================
-            // PARSING JSON MESSAGES
-            // ============================================================================
-            // 
-            // The server sends structured messages as JSON
-            // We try to parse them, but handle cases where they might not be JSON
+            // Parse the message
             let message;
             try {
-                // Try to parse the message as JSON
-                // JSON.parse() converts a JSON string back to a JavaScript object
                 message = JSON.parse(messageString);
             } catch (parseError) {
-                // ============================================================================
-                // FALLBACK FOR NON-JSON MESSAGES
-                // ============================================================================
-                // 
-                // If the message isn't valid JSON, we treat it as plain text
-                // This provides backward compatibility and error resilience
+                // Handle non-JSON messages
                 message = {
                     type: 'text',
                     content: messageString,
@@ -301,21 +167,10 @@ class BroadcastClient {
                 };
             }
             
-            // ============================================================================
-            // DISPLAYING THE MESSAGE
-            // ============================================================================
-            // 
-            // We pass the parsed message to our display function
-            // This will show it to the user in a formatted way
+            // Display the message
             this.displayMessage(message);
             
         } catch (error) {
-            // ============================================================================
-            // HANDLING MESSAGE PROCESSING ERRORS
-            // ============================================================================
-            // 
-            // If something goes wrong while processing the message, we log the error
-            // but don't crash the application
             console.error('❌ Error processing received message:', error.message);
         }
     }
@@ -325,84 +180,71 @@ class BroadcastClient {
      * DISPLAY MESSAGE - FORMATTING AND SHOWING MESSAGES
      * ============================================================================
      * 
-     * This function displays messages to the user based on their type.
-     * Think of it as the "message formatter" that makes messages look nice
-     * and easy to read.
-     * 
      * @param {Object} message - The message object with type, content, timestamp, etc.
      */
     displayMessage(message) {
-        // ============================================================================
-        // FORMATTING TIMESTAMP
-        // ============================================================================
-        // 
-        // We convert the ISO timestamp to a readable local time format
-        // This makes it easier for users to understand when messages were sent
         const timestamp = new Date(message.timestamp).toLocaleTimeString();
         
-        // ============================================================================
-        // HANDLING DIFFERENT MESSAGE TYPES
-        // ============================================================================
-        // 
-        // We use a switch statement to handle different types of messages
-        // Each type gets displayed differently for better user experience
         switch (message.type) {
+            case 'auth_required':
+                console.log(`\n🔐 [${timestamp}] ${message.content}`);
+                console.log('💡 Use "register <username> <password>" or "login <username> <password>"');
+                break;
+                
+            case 'auth_success':
+                console.log(`\n✅ [${timestamp}] ${message.content}`);
+                this.isAuthenticated = true;
+                this.user = message.user;
+                this.token = message.token;
+                console.log(`👤 Welcome, ${message.user.displayName}!`);
+                break;
+                
             case 'broadcast':
-                // ============================================================================
-                // BROADCAST MESSAGES - FROM OTHER CLIENTS
-                // ============================================================================
-                // 
-                // These are messages from other users in the chat
-                // We show who sent it and what they said
-                console.log(`\n📨 [${timestamp}] ${message.clientId}: ${message.content}`);
+                console.log(`\n📨 [${timestamp}] ${message.user.displayName}: ${message.content}`);
+                // Store in message history
+                this.messageHistory.push(message);
+                break;
+                
+            case 'message_history':
+                console.log(`\n📚 [${timestamp}] ${message.content}`);
+                if (message.messages && message.messages.length > 0) {
+                    console.log('📖 Recent messages:');
+                    message.messages.forEach(msg => {
+                        const msgTime = new Date(msg.timestamp).toLocaleTimeString();
+                        console.log(`   [${msgTime}] ${msg.display_name || msg.username}: ${msg.content}`);
+                    });
+                }
+                break;
+                
+            case 'online_users':
+                console.log(`\n👥 [${timestamp}] ${message.content}`);
+                this.onlineUsers = message.users;
+                if (message.users && message.users.length > 0) {
+                    console.log('🟢 Online users:');
+                    message.users.forEach(user => {
+                        const lastSeen = new Date(user.last_seen).toLocaleTimeString();
+                        console.log(`   • ${user.display_name || user.username} (last seen: ${lastSeen})`);
+                    });
+                }
                 break;
                 
             case 'system':
-                // ============================================================================
-                // SYSTEM MESSAGES - SERVER NOTIFICATIONS
-                // ============================================================================
-                // 
-                // These are notifications from the server (welcome, join/leave, etc.)
-                // We show them with a bell icon to distinguish them from user messages
                 console.log(`\n🔔 [${timestamp}] ${message.content}`);
                 break;
                 
             case 'confirmation':
-                // ============================================================================
-                // CONFIRMATION MESSAGES - SUCCESS NOTIFICATIONS
-                // ============================================================================
-                // 
-                // These confirm that our message was successfully sent
-                // We show them with a checkmark to indicate success
                 console.log(`\n✅ [${timestamp}] ${message.content}`);
                 break;
                 
             case 'error':
-                // ============================================================================
-                // ERROR MESSAGES - SERVER ERRORS
-                // ============================================================================
-                // 
-                // These are error messages from the server
-                // We show them with an X icon to indicate problems
                 console.log(`\n❌ [${timestamp}] Error: ${message.content}`);
                 break;
                 
             default:
-                // ============================================================================
-                // UNKNOWN MESSAGE TYPES - FALLBACK
-                // ============================================================================
-                // 
-                // If we receive a message type we don't recognize, we display it as plain text
-                // This ensures we don't lose any messages, even if they're in an unknown format
                 console.log(`\n📨 [${timestamp}] ${message.content}`);
         }
         
-        // ============================================================================
-        // SHOWING INPUT PROMPT AGAIN
-        // ============================================================================
-        // 
-        // After displaying a message, we show the input prompt again
-        // This ensures the user knows they can continue typing
+        // Show input prompt again
         this.showInputPrompt();
     }
     
@@ -410,37 +252,17 @@ class BroadcastClient {
      * ============================================================================
      * HANDLE CLOSE - CONNECTION CLOSED
      * ============================================================================
-     * 
-     * This function is called when the connection to the server is closed.
-     * Think of it as the "goodbye" handler when someone hangs up the phone.
      */
     handleClose() {
-        // ============================================================================
-        // UPDATING CONNECTION STATUS
-        // ============================================================================
-        // 
-        // We mark ourselves as disconnected
         this.isConnected = false;
+        this.isAuthenticated = false;
         
-        // ============================================================================
-        // INFORMING THE USER
-        // ============================================================================
-        // 
-        // We let the user know that the connection has been closed
-        console.log('\n👋 Disconnected from broadcast server');
+        console.log('\n👋 Disconnected from enhanced broadcast server');
         
-        // ============================================================================
-        // CLEANING UP RESOURCES
-        // ============================================================================
-        // 
-        // We close the readline interface to free up system resources
+        // Clean up resources
         this.rl.close();
         
-        // ============================================================================
-        // EXITING THE PROGRAM
-        // ============================================================================
-        // 
-        // We exit the program with code 0 (success) since this is a normal disconnection
+        // Exit the program
         process.exit(0);
     }
     
@@ -449,28 +271,14 @@ class BroadcastClient {
      * HANDLE ERROR - WEBSOCKET ERRORS
      * ============================================================================
      * 
-     * This function handles errors that occur with the WebSocket connection.
-     * Think of it as the "troubleshooting" function when something goes wrong.
-     * 
      * @param {Error} error - The error object containing error details
      */
     handleError(error) {
-        // ============================================================================
-        // LOGGING THE ERROR
-        // ============================================================================
-        // 
-        // We log the error so we can understand what went wrong
         console.error('❌ WebSocket error:', error.message);
         
-        // ============================================================================
-        // HANDLING CONNECTION FAILURES
-        // ============================================================================
-        // 
-        // If we're not connected and get an error, it means the connection failed
-        // We provide helpful information and exit the program
         if (!this.isConnected) {
             console.error('❌ Failed to connect to server. Make sure the server is running.');
-            process.exit(1);  // Exit with error code 1
+            process.exit(1);
         }
     }
     
@@ -478,34 +286,17 @@ class BroadcastClient {
      * ============================================================================
      * START INPUT LISTENER - BEGINNING USER INTERACTION
      * ============================================================================
-     * 
-     * This method sets up the interactive interface where users can type messages.
-     * Think of it as "opening the chat window" where users can start typing.
      */
     startInputListener() {
-        // ============================================================================
-        // SHOWING THE INITIAL PROMPT
-        // ============================================================================
-        // 
-        // We show the input prompt to let the user know they can start typing
+        // Show the initial prompt
         this.showInputPrompt();
         
-        // ============================================================================
-        // LISTENING FOR USER INPUT
-        // ============================================================================
-        // 
-        // We set up a listener for when the user types something and presses Enter
-        // This is like having someone ready to take your message
+        // Listen for user input
         this.rl.on('line', (input) => {
             this.handleUserInput(input.trim());
         });
         
-        // ============================================================================
-        // HANDLING CTRL+C GRACEFULLY
-        // ============================================================================
-        // 
-        // We listen for the SIGINT signal (Ctrl+C) and handle it gracefully
-        // This ensures the user can exit the program cleanly
+        // Handle Ctrl+C gracefully
         this.rl.on('SIGINT', () => {
             this.disconnect();
         });
@@ -515,18 +306,13 @@ class BroadcastClient {
      * ============================================================================
      * SHOW INPUT PROMPT - DISPLAYING THE TYPING PROMPT
      * ============================================================================
-     * 
-     * This function shows the input prompt to the user.
-     * Think of it as the "cursor" that shows where the user can type.
      */
     showInputPrompt() {
-        // ============================================================================
-        // WRITING THE PROMPT
-        // ============================================================================
-        // 
-        // We use process.stdout.write instead of console.log to avoid adding a newline
-        // This keeps the prompt on the same line as where the user will type
-        process.stdout.write('\n💬 You: ');
+        if (this.isAuthenticated && this.user) {
+            process.stdout.write(`\n💬 ${this.user.displayName}: `);
+        } else {
+            process.stdout.write('\n💬 Guest: ');
+        }
     }
     
     /**
@@ -534,61 +320,254 @@ class BroadcastClient {
      * HANDLE USER INPUT - PROCESSING USER COMMANDS AND MESSAGES
      * ============================================================================
      * 
-     * This function processes what the user types and decides what to do with it.
-     * Think of it as the "command center" that interprets user input.
-     * 
      * @param {string} input - The user's input (what they typed)
      */
     handleUserInput(input) {
-        // ============================================================================
-        // CHECKING FOR QUIT COMMANDS
-        // ============================================================================
-        // 
-        // We check if the user wants to quit the application
-        // We accept both "quit" and "exit" as valid quit commands
-        if (input.toLowerCase() === 'quit' || input.toLowerCase() === 'exit') {
-            this.disconnect();
-            return;  // Exit the function early
-        }
-        
-        // ============================================================================
-        // CHECKING FOR HELP COMMAND
-        // ============================================================================
-        // 
-        // We check if the user wants to see help information
-        if (input.toLowerCase() === 'help') {
-            this.showHelp();
-            return;  // Exit the function early
-        }
-        
-        // ============================================================================
-        // CHECKING FOR STATUS COMMAND
-        // ============================================================================
-        // 
-        // We check if the user wants to see connection status
-        if (input.toLowerCase() === 'status') {
-            this.showStatus();
-            return;  // Exit the function early
-        }
-        
-        // ============================================================================
-        // VALIDATING MESSAGE CONTENT
-        // ============================================================================
-        // 
-        // We don't want to send empty messages (just spaces or nothing)
-        // If the input is empty, we just show the prompt again
         if (!input) {
             this.showInputPrompt();
-            return;  // Exit the function early
+            return;
         }
         
-        // ============================================================================
-        // SENDING THE MESSAGE
-        // ============================================================================
-        // 
-        // If we get here, the input is a valid message to send
-        // We pass it to the sendMessage function
-        this.sendMessage(input);
+        // Check for commands
+        if (input.startsWith('/')) {
+            this.handleCommand(input.substring(1));
+            return;
+        }
+        
+        // Check for quit commands
+        if (input.toLowerCase() === 'quit' || input.toLowerCase() === 'exit') {
+            this.disconnect();
+            return;
+        }
+        
+        // Check for help command
+        if (input.toLowerCase() === 'help') {
+            this.showHelp();
+            return;
+        }
+        
+        // Check for status command
+        if (input.toLowerCase() === 'status') {
+            this.showStatus();
+            return;
+        }
+        
+        // Check for authentication commands
+        if (input.startsWith('register ')) {
+            this.handleRegister(input.substring(9));
+            return;
+        }
+        
+        if (input.startsWith('login ')) {
+            this.handleLogin(input.substring(6));
+            return;
+        }
+        
+        if (input.toLowerCase() === 'logout') {
+            this.handleLogout();
+            return;
+        }
+        
+        // Check for other commands
+        if (input.toLowerCase() === 'history') {
+            this.requestMessageHistory();
+            return;
+        }
+        
+        if (input.toLowerCase() === 'online-users' || input.toLowerCase() === 'users') {
+            this.requestOnlineUsers();
+            return;
+        }
+        
+        // If authenticated, send message; otherwise, show auth required
+        if (this.isAuthenticated) {
+            this.sendMessage(input);
+        } else {
+            console.log('🔐 Authentication required to send messages');
+            console.log('💡 Use "register <username> <password>" or "login <username> <password>"');
+            this.showInputPrompt();
+        }
+    }
+    
+    /**
+     * ============================================================================
+     * HANDLE COMMANDS - PROCESSING SLASH COMMANDS
+     * ============================================================================
+     * 
+     * @param {string} command - The command without the slash
+     */
+    handleCommand(command) {
+        const [cmd, ...args] = command.split(' ');
+        
+        switch (cmd.toLowerCase()) {
+            case 'register':
+                if (args.length >= 2) {
+                    this.handleRegister(args.join(' '));
+                } else {
+                    console.log('❌ Usage: /register <username> <password> [email] [display_name]');
+                }
+                break;
+                
+            case 'login':
+                if (args.length >= 2) {
+                    this.handleLogin(args.join(' '));
+                } else {
+                    console.log('❌ Usage: /login <username> <password>');
+                }
+                break;
+                
+            case 'logout':
+                this.handleLogout();
+                break;
+                
+            case 'history':
+                this.requestMessageHistory();
+                break;
+                
+            case 'users':
+            case 'online-users':
+                this.requestOnlineUsers();
+                break;
+                
+            case 'help':
+                this.showHelp();
+                break;
+                
+            case 'status':
+                this.showStatus();
+                break;
+                
+            default:
+                console.log(`❌ Unknown command: /${cmd}`);
+                console.log('💡 Type "help" to see available commands');
+        }
+        
+        this.showInputPrompt();
+    }
+    
+    /**
+     * ============================================================================
+     * HANDLE REGISTER - PROCESSING USER REGISTRATION
+     * ============================================================================
+     * 
+     * @param {string} input - The registration input
+     */
+    handleRegister(input) {
+        const parts = input.split(' ');
+        if (parts.length < 2) {
+            console.log('❌ Usage: register <username> <password> [email] [display_name]');
+            this.showInputPrompt();
+            return;
+        }
+        
+        const username = parts[0];
+        const password = parts[1];
+        const email = parts[2] || null;
+        const displayName = parts[3] || username;
+        
+        const message = {
+            type: 'register',
+            username,
+            password,
+            email,
+            displayName
+        };
+        
+        this.ws.send(JSON.stringify(message));
+    }
+    
+    /**
+     * ============================================================================
+     * HANDLE LOGIN - PROCESSING USER LOGIN
+     * ============================================================================
+     * 
+     * @param {string} input - The login input
+     */
+    handleLogin(input) {
+        const parts = input.split(' ');
+        if (parts.length < 2) {
+            console.log('❌ Usage: login <username> <password>');
+            this.showInputPrompt();
+            return;
+        }
+        
+        const username = parts[0];
+        const password = parts[1];
+        
+        const message = {
+            type: 'login',
+            username,
+            password
+        };
+        
+        this.ws.send(JSON.stringify(message));
+    }
+    
+    /**
+     * ============================================================================
+     * HANDLE LOGOUT - PROCESSING USER LOGOUT
+     * ============================================================================
+     */
+    handleLogout() {
+        if (this.isAuthenticated) {
+            const message = {
+                type: 'logout'
+            };
+            
+            this.ws.send(JSON.stringify(message));
+            
+            // Reset local state
+            this.isAuthenticated = false;
+            this.user = null;
+            this.token = null;
+            
+            console.log('👋 Logged out successfully');
+        } else {
+            console.log('❌ Not currently logged in');
+        }
+        
+        this.showInputPrompt();
+    }
+    
+    /**
+     * ============================================================================
+     * REQUEST MESSAGE HISTORY - REQUESTING RECENT MESSAGES
+     * ============================================================================
+     */
+    requestMessageHistory() {
+        if (this.isAuthenticated) {
+            const message = {
+                type: 'get_history',
+                roomId: 'main',
+                limit: 50,
+                offset: 0
+            };
+            
+            this.ws.send(JSON.stringify(message));
+        } else {
+            console.log('🔐 Authentication required to view message history');
+        }
+        
+        this.showInputPrompt();
+    }
+    
+    /**
+     * ============================================================================
+     * REQUEST ONLINE USERS - REQUESTING ONLINE USER LIST
+     * ============================================================================
+     */
+    requestOnlineUsers() {
+        if (this.isAuthenticated) {
+            const message = {
+                type: 'get_online_users'
+            };
+            
+            this.ws.send(JSON.stringify(message));
+        } else {
+            console.log('🔐 Authentication required to view online users');
+        }
+        
+        this.showInputPrompt();
     }
     
     /**
@@ -596,39 +575,28 @@ class BroadcastClient {
      * SEND MESSAGE - TRANSMITTING MESSAGES TO THE SERVER
      * ============================================================================
      * 
-     * This function sends a message to the server for broadcasting to other clients.
-     * Think of it as "dialing the number" to send your message to everyone.
-     * 
      * @param {string} message - The message to send
      */
     sendMessage(message) {
-        // ============================================================================
-        // CHECKING CONNECTION STATUS
-        // ============================================================================
-        // 
-        // We only send messages if we're connected and have a valid WebSocket
-        // This prevents errors from trying to send to a closed connection
         if (!this.isConnected || !this.ws) {
             console.log('❌ Not connected to server');
-            return;  // Exit the function early
+            return;
         }
         
-        // ============================================================================
-        // SENDING THE MESSAGE
-        // ============================================================================
-        // 
-        // We wrap the send operation in try-catch to handle any errors
+        if (!this.isAuthenticated) {
+            console.log('🔐 Authentication required to send messages');
+            return;
+        }
+        
         try {
-            // Send the message as a string to the server
-            // The server will parse it and broadcast it to all other clients
-            this.ws.send(message);
+            const messageObj = {
+                type: 'broadcast',
+                content: message
+            };
+            
+            this.ws.send(JSON.stringify(messageObj));
             
         } catch (error) {
-            // ============================================================================
-            // HANDLING SEND ERRORS
-            // ============================================================================
-            // 
-            // If sending fails, we log the error but don't crash the application
             console.error('❌ Failed to send message:', error.message);
         }
     }
@@ -637,16 +605,30 @@ class BroadcastClient {
      * ============================================================================
      * SHOW HELP - DISPLAYING AVAILABLE COMMANDS
      * ============================================================================
-     * 
-     * This function shows the user what commands are available.
-     * Think of it as the "user manual" that explains how to use the application.
      */
     showHelp() {
         console.log('\n📖 Available commands:');
-        console.log('  help     - Show this help message');
-        console.log('  status   - Show connection status');
-        console.log('  quit     - Disconnect from server');
-        console.log('  exit     - Disconnect from server');
+        console.log('  Authentication:');
+        console.log('    register <username> <password> [email] [display_name] - Create new account');
+        console.log('    login <username> <password> - Login to existing account');
+        console.log('    logout - Logout from current account');
+        console.log('');
+        console.log('  Chat:');
+        console.log('    history - View recent message history');
+        console.log('    online-users / users - View online users');
+        console.log('    status - Show connection and authentication status');
+        console.log('    help - Show this help message');
+        console.log('    quit / exit - Disconnect from server');
+        console.log('');
+        console.log('  Slash Commands:');
+        console.log('    /register <username> <password> [email] [display_name]');
+        console.log('    /login <username> <password>');
+        console.log('    /logout');
+        console.log('    /history');
+        console.log('    /users');
+        console.log('    /help');
+        console.log('    /status');
+        console.log('');
         console.log('  (any other text) - Send a message to all connected clients');
     }
     
@@ -654,73 +636,69 @@ class BroadcastClient {
      * ============================================================================
      * SHOW STATUS - DISPLAYING CONNECTION INFORMATION
      * ============================================================================
-     * 
-     * This function shows the current connection status and information.
-     * Think of it as the "status screen" that shows your connection details.
      */
     showStatus() {
         console.log('\n📊 Connection Status:');
         console.log(`  Server: ${this.serverUrl}`);
         console.log(`  Connected: ${this.isConnected ? 'Yes' : 'No'}`);
-        console.log(`  Client ID: ${this.clientId || 'Unknown'}`);
+        console.log(`  Authenticated: ${this.isAuthenticated ? 'Yes' : 'No'}`);
+        
+        if (this.isAuthenticated && this.user) {
+            console.log(`  Username: ${this.user.username}`);
+            console.log(`  Display Name: ${this.user.displayName}`);
+            if (this.user.email) {
+                console.log(`  Email: ${this.user.email}`);
+            }
+        }
+        
+        if (this.clientId) {
+            console.log(`  Client ID: ${this.clientId}`);
+        }
+        
+        if (this.onlineUsers.length > 0) {
+            console.log(`  Online Users: ${this.onlineUsers.length}`);
+        }
+        
+        if (this.messageHistory.length > 0) {
+            console.log(`  Messages in Session: ${this.messageHistory.length}`);
+        }
     }
     
     /**
      * ============================================================================
      * DISCONNECT - GRACEFUL DISCONNECTION
      * ============================================================================
-     * 
-     * This function gracefully disconnects from the server and cleans up resources.
-     * Think of it as the "goodbye" function that properly ends the conversation.
      */
     disconnect() {
-        // ============================================================================
-        // INFORMING THE USER
-        // ============================================================================
-        // 
-        // We let the user know we're disconnecting
         console.log('\n🛑 Disconnecting from server...');
         
-        // ============================================================================
-        // CLOSING THE WEBSOCKET CONNECTION
-        // ============================================================================
-        // 
-        // If we have an active connection, we close it properly
-        // This ensures the server knows we're leaving
+        // Send logout message if authenticated
+        if (this.isAuthenticated && this.ws && this.isConnected) {
+            try {
+                const message = {
+                    type: 'logout'
+                };
+                this.ws.send(JSON.stringify(message));
+            } catch (error) {
+                // Ignore errors during disconnect
+            }
+        }
+        
+        // Close the WebSocket connection
         if (this.ws && this.isConnected) {
-            // Close the WebSocket connection
             this.ws.close();
         }
         
-        // ============================================================================
-        // CLEANING UP THE READLINE INTERFACE
-        // ============================================================================
-        // 
-        // We close the readline interface to free up system resources
+        // Clean up the readline interface
         this.rl.close();
         
-        // ============================================================================
-        // CONFIRMING DISCONNECTION
-        // ============================================================================
-        // 
-        // We confirm that we've successfully disconnected
+        // Confirm disconnection
         console.log('✅ Disconnected');
         
-        // ============================================================================
-        // EXITING THE PROGRAM
-        // ============================================================================
-        // 
-        // We exit the program with code 0 (success) since this is a normal disconnection
+        // Exit the program
         process.exit(0);
     }
 }
 
-// ============================================================================
-// EXPORTING THE CLASS
-// ============================================================================
-// 
-// We export the BroadcastClient class so other files can use it
-// This is like making the class available for import in other parts of the application
-// 
-// In other files, you can use: const BroadcastClient = require('./client.js');
+// Export the class
 module.exports = BroadcastClient; 
