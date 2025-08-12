@@ -1,23 +1,48 @@
-# Broadcast Server
+# Enhanced Broadcast Server
 
-A real-time broadcast server that allows multiple clients to connect and send messages to all other connected clients. Built with Node.js and WebSockets.
+A real-time broadcast server with **user authentication** and **message persistence** that allows multiple authenticated clients to connect and send messages to each other. Built with Node.js, WebSockets, SQLite, and JWT authentication.
 
 ## 🎯 What is this?
 
-This is a **broadcast server** - think of it like a chat room where:
-- Multiple people can join at the same time
-- When one person sends a message, everyone else sees it instantly
-- It's like a group chat, but simpler and more direct
+This is an **enhanced broadcast server** - think of it like a secure chat room where:
+- Users must register/login to participate
+- Messages are stored permanently in a database
+- Multiple authenticated users can join at the same time
+- When one user sends a message, everyone else sees it instantly
+- Message history is preserved and can be retrieved
+- User sessions are managed securely with JWT tokens
 
 ## 🚀 Features
 
+### **Core Features:**
 - ✅ **Real-time messaging** - Messages appear instantly
-- ✅ **Multiple clients** - Many people can connect at once
+- ✅ **Multiple clients** - Many authenticated users can connect at once
 - ✅ **Simple CLI interface** - Easy to use from the command line
-- ✅ **Automated testing** - Comprehensive examples demonstrating all features
 - ✅ **Graceful handling** - Handles connections and disconnections properly
 - ✅ **Error handling** - Robust error handling and recovery
 - ✅ **Cross-platform** - Works on Windows, Mac, and Linux
+
+### **🔐 NEW: Authentication & Security:**
+- ✅ **User registration** - Create new accounts with username/password
+- ✅ **User login** - Secure authentication with JWT tokens
+- ✅ **Password hashing** - Secure password storage with bcrypt
+- ✅ **Session management** - JWT token-based user sessions
+- ✅ **User profiles** - Display names, emails, and avatar support
+- ✅ **Online status** - Track who's currently online
+
+### **💾 NEW: Message Persistence:**
+- ✅ **SQLite database** - Persistent message storage
+- ✅ **Message history** - Retrieve recent messages
+- ✅ **User tracking** - Link messages to authenticated users
+- ✅ **Message metadata** - Timestamps, user info, and message types
+- ✅ **Database management** - Easy database initialization and setup
+
+### **🔄 Enhanced Client Features:**
+- ✅ **Interactive authentication** - Register/login directly from client
+- ✅ **Message history** - View recent chat history
+- ✅ **Online users** - See who's currently online
+- ✅ **Enhanced commands** - Slash commands and built-in functions
+- ✅ **User status** - Display connection and authentication status
 
 ## 📋 Prerequisites
 
@@ -47,16 +72,25 @@ If you don't have Node.js, download it from [nodejs.org](https://nodejs.org/)
    npm install
    ```
 
-3. **Make the CLI executable** (Linux/Mac only)
+3. **Initialize the database**
+   ```bash
+   npm run init-db
+   ```
+   This creates the SQLite database and a default admin user:
+   - Username: `admin`
+   - Password: `admin123`
+   ⚠️ **Change this password in production!**
+
+4. **Make the CLI executable** (Linux/Mac only)
    ```bash
    chmod +x bin/broadcast-server
    ```
 
 ## 🎮 How to Use
 
-### Starting the Server
+### Starting the Enhanced Server
 
-To start the broadcast server:
+To start the enhanced broadcast server with authentication:
 
 ```bash
 # Start on default port (8080)
@@ -70,9 +104,10 @@ node src/cli.js start --port 3000
 ```
 
 **What happens:**
-- The server starts listening for connections
-- You'll see a message like "🚀 Broadcast server starting on port 8080..."
-- The server is now ready to accept client connections
+- The enhanced server starts with database connection
+- Authentication service is initialized
+- Server is ready to accept authenticated client connections
+- You'll see "🔐 Authentication and message persistence enabled"
 
 ### Connecting as a Client
 
@@ -91,49 +126,107 @@ node src/cli.js connect --server ws://192.168.1.100:8080
 
 **What happens:**
 - The client connects to the server
-- You'll see "✅ Connected to broadcast server!"
-- You can now type messages and press Enter to send them
+- You'll see "🔐 Authentication required to join the chat"
+- You must register or login to participate
+
+### User Authentication
+
+#### **Register a New User:**
+```
+register <username> <password> [email] [display_name]
+```
+**Examples:**
+```
+register john password123 john@example.com John Doe
+register alice secret456 alice@example.com
+register bob mypass789
+```
+
+#### **Login with Existing User:**
+```
+login <username> <password>
+```
+**Examples:**
+```
+login admin admin123
+login john password123
+```
+
+#### **Logout:**
+```
+logout
+```
 
 ### Sending Messages
 
-Once connected as a client:
+Once authenticated:
 
 1. **Type your message** and press Enter
-2. **Your message** will be sent to all other connected clients
-3. **You'll see** messages from other clients in real-time
+2. **Your message** will be sent to all other authenticated clients
+3. **You'll see** messages from other users in real-time
+4. **Messages are saved** to the database for persistence
 
 **Example session:**
 ```
-💬 You: Hello everyone!
-✅ [2:30:15 PM] Message sent successfully!
+🔐 Please authenticate to join the chat
+💡 Use "register <username> <password>" or "login <username> <password>"
 
-📨 [2:30:16 PM] 192.168.1.5:54321: Hi there!
-📨 [2:30:17 PM] 192.168.1.6:12345: How's it going?
+💬 Guest: register alice password123 alice@example.com Alice Johnson
+✅ Registration successful
+👤 Welcome, Alice Johnson!
 
-💬 You: Great! This is working perfectly!
+💬 Alice Johnson: Hello everyone!
+✅ Message sent successfully!
+
+📨 [2:30:16 PM] Bob Smith: Hi Alice! How are you?
+📨 [2:30:17 PM] Charlie Brown: Hey guys! This is great!
 ```
 
-### Client Commands
+### Enhanced Client Commands
 
-When connected as a client, you can use these commands:
+When connected as an authenticated client, you can use these commands:
 
+#### **Authentication Commands:**
+- `register <username> <password> [email] [display_name]` - Create new account
+- `login <username> <password>` - Login to existing account
+- `logout` - Logout from current account
+
+#### **Chat Commands:**
+- `history` - View recent message history
+- `online-users` or `users` - View online users
+- `status` - Show connection and authentication status
 - `help` - Show available commands
-- `status` - Show connection status
 - `quit` or `exit` - Disconnect from server
 
-### Quick Testing
+#### **Slash Commands:**
+- `/register <username> <password> [email] [display_name]`
+- `/login <username> <password>`
+- `/logout`
+- `/history`
+- `/users`
+- `/help`
+- `/status`
 
-Want to see the broadcast server in action quickly? Run:
+### User Management
 
+#### **Create Users from CLI:**
 ```bash
-# See multi-client broadcasting demo
-node -e "require('./example.js').example2()"
+# Create a new user account
+node src/cli.js create-user -u username -p password -e email@example.com -d "Display Name"
 
-# Or run all examples
-node example.js
+# Examples:
+node src/cli.js create-user -u john -p secret123 -e john@example.com -d "John Doe"
+node src/cli.js create-user -u alice -p mypass456 -d "Alice"
 ```
 
-This will automatically demonstrate real-time messaging between multiple clients!
+#### **Database Management:**
+```bash
+# Initialize/reset the database
+npm run init-db
+
+# OR use the CLI
+node src/cli.js init-db
+```
 
 ## 🔧 Configuration Options
 
@@ -150,6 +243,12 @@ This will automatically demonstrate real-time messaging between multiple clients
 |--------|-------------|---------|
 | `--server` | Server URL to connect to | `ws://localhost:8080` |
 
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `JWT_SECRET` | Secret key for JWT tokens | `your-super-secret-jwt-key-change-in-production` |
+
 ## 📚 How It Works
 
 ### Architecture Overview
@@ -157,45 +256,89 @@ This will automatically demonstrate real-time messaging between multiple clients
 ```
 ┌─────────────────┐    WebSocket    ┌─────────────────┐
 │   Client 1      │ ◄─────────────► │                 │
+│ (Authenticated) │                 │                 │
 └─────────────────┘                 │                 │
-                                   │   Broadcast     │
-┌─────────────────┐    WebSocket    │    Server       │
-│   Client 2      │ ◄─────────────► │                 │
-└─────────────────┘                 │                 │
+                                   │   Enhanced      │
+┌─────────────────┐    WebSocket    │   Broadcast     │
+│   Client 2      │ ◄─────────────► │    Server       │
+│ (Authenticated) │                 │   + Auth       │
+└─────────────────┘                 │   + Database    │
                                    │                 │
 ┌─────────────────┐    WebSocket    │                 │
 │   Client 3      │ ◄─────────────► │                 │
-└─────────────────┘                 └─────────────────┘
+│ (Authenticated) │                 └─────────────────┘
+└─────────────────┘
 ```
 
 ### Key Components
 
-1. **WebSocket Server** (`src/server.js`)
+1. **Enhanced WebSocket Server** (`src/server.js`)
    - Listens for incoming connections
-   - Manages all connected clients
-   - Broadcasts messages to all clients
+   - Manages user authentication and sessions
+   - Stores all connected authenticated clients
+   - Broadcasts messages to all authenticated clients
+   - Persists messages to SQLite database
 
-2. **WebSocket Client** (`src/client.js`)
-   - Connects to the server
-   - Sends messages
-   - Receives and displays messages
+2. **Authentication Service** (`src/auth/authService.js`)
+   - Handles user registration and login
+   - Manages JWT token generation and validation
+   - Securely hashes passwords with bcrypt
+   - Manages user sessions and profiles
 
-3. **CLI Interface** (`src/cli.js`)
+3. **Database Manager** (`src/database/database.js`)
+   - Manages SQLite database connections
+   - Handles user data and message storage
+   - Provides message history and user queries
+   - Manages database schema and indexes
+
+4. **Enhanced WebSocket Client** (`src/client.js`)
+   - Connects to the enhanced server
+   - Provides interactive authentication interface
+   - Sends and receives authenticated messages
+   - Displays message history and online users
+
+5. **Enhanced CLI Interface** (`src/cli.js`)
    - Handles command-line arguments
-   - Starts server or client based on command
+   - Starts enhanced server with authentication
+   - Provides user management commands
+   - Initializes database and creates users
 
-### Message Flow
+### Authentication Flow
 
-1. **Client connects** → Server adds client to list
-2. **Client sends message** → Server receives message
-3. **Server broadcasts** → Message sent to all other clients
-4. **Other clients receive** → Message displayed on their screens
+1. **Client connects** → Server sends authentication request
+2. **Client registers/logs in** → Server validates credentials
+3. **Server generates JWT token** → Client receives authentication success
+4. **Client can now send messages** → Messages are broadcasted to all authenticated clients
+5. **Messages are persisted** → Stored in SQLite database with user information
 
-## 🧪 Testing the Server
+### Message Persistence
 
-### Method 1: Manual Testing with Multiple Terminals
+1. **Message sent** → Server receives message from authenticated client
+2. **Message saved** → Stored in database with sender ID and metadata
+3. **Message broadcasted** → Sent to all other authenticated clients
+4. **History available** → Clients can request recent message history
 
-1. **Start the server** in one terminal:
+## 🧪 Testing the Enhanced Server
+
+### Method 1: Run Enhanced Examples
+
+The project includes comprehensive examples demonstrating all new features:
+
+```bash
+# Run all enhanced examples
+node example-enhanced.js
+
+# Run individual examples
+node -e "require('./example-enhanced.js').example1()"  # Basic auth flow
+node -e "require('./example-enhanced.js').example2()"  # Multi-user chat
+node -e "require('./example-enhanced.js').example3()"  # Message history
+node -e "require('./example-enhanced.js').example4()"  # Login with existing user
+node -e "require('./example-enhanced.js').example5()"  # Full feature demo
+```
+
+### Method 2: Manual Testing
+
+1. **Start the enhanced server** in one terminal:
    ```bash
    npm start
    ```
@@ -212,62 +355,33 @@ This will automatically demonstrate real-time messaging between multiple clients
    npm run connect
    ```
 
-3. **Send messages** from any client and watch them appear in all other clients
-
-### Method 2: Automated Testing with Examples
-
-The project includes comprehensive automated tests that demonstrate all features:
-
-#### **Run All Examples (Recommended)**
-```bash
-node example.js
-```
-This runs 4 different scenarios automatically:
-- **Example 1**: Single client connection and messaging
-- **Example 2**: Multi-client broadcasting with real-time chat simulation
-- **Example 3**: Client join/leave scenarios
-- **Example 4**: Custom message handling
-
-#### **Run Individual Examples**
-```bash
-# Multi-client broadcasting demo (main feature)
-node -e "require('./example.js').example2()"
-
-# Client join/leave simulation
-node -e "require('./example.js').example3()"
-
-# Custom message handling
-node -e "require('./example.js').example4()"
-```
-
-#### **Example Output**
-```
-=== Example 2: Multi-Client Broadcasting Demo ===
-🔗 Connecting Client 1...
-🔗 Connecting Client 2...
-🔗 Connecting Client 3...
-
-💬 Client 1: "Hello everyone! How are you doing?"
-📨 [Client2] Received: "Hello everyone! How are you doing?" from ::ffff:127.0.0.1:60010
-📨 [Client3] Received: "Hello everyone! How are you doing?" from ::ffff:127.0.0.1:60010
-
-💬 Client 2: "Hi there! I'm doing great, thanks!"
-📨 [Client1] Received: "Hi there! I'm doing great, thanks!" from ::ffff:127.0.0.1:60026
-📨 [Client3] Received: "Hi there! I'm doing great, thanks!" from ::ffff:127.0.0.1:60026
-```
+3. **Register users and start chatting** - watch authentication and persistence in action!
 
 ### Expected Behavior
 
-- ✅ All clients should connect successfully
-- ✅ Messages from one client should appear in all other clients
-- ✅ System messages should show when clients join/leave
-- ✅ Clients should disconnect gracefully when you type "quit"
-- ✅ Real-time broadcasting with instant message delivery
-- ✅ Proper client management (join/leave notifications)
+- ✅ All clients should connect and receive authentication requests
+- ✅ Users should be able to register new accounts
+- ✅ Users should be able to login with existing accounts
+- ✅ Only authenticated users should be able to send messages
+- ✅ Messages should be broadcasted to all authenticated clients
+- ✅ Messages should be persisted in the database
+- ✅ Message history should be retrievable
+- ✅ Online user status should be tracked
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
+
+**"Database tables not ready" error:**
+```bash
+# Initialize the database first
+npm run init-db
+```
+
+**"Authentication failed" error:**
+- Make sure you're using the correct username/password
+- Check if the user exists (try registering first)
+- Verify the server is running with authentication enabled
 
 **"Port already in use" error:**
 ```bash
@@ -276,99 +390,123 @@ npm start -- --port 3000
 ```
 
 **"Failed to connect" error:**
-- Make sure the server is running
+- Make sure the enhanced server is running
 - Check if the port number matches
 - Verify the server URL is correct
-
-**"Permission denied" error (Linux/Mac):**
-```bash
-chmod +x bin/broadcast-server
-```
 
 ### Debug Mode
 
 To see more detailed logs, you can modify the server code to add more console.log statements.
 
-## 🔍 Understanding the Code
+## 🔍 Understanding the Enhanced Code
 
 ### Key Concepts
 
-1. **WebSockets**
-   - Full-duplex communication protocol
-   - Maintains persistent connection
-   - Real-time data transfer
+1. **JWT Authentication**
+   - JSON Web Tokens for secure user sessions
+   - Stateless authentication with database validation
+   - Automatic token expiration and refresh
 
-2. **Event-driven Programming**
-   - Server responds to events (connection, message, disconnect)
-   - No polling or constant checking needed
+2. **SQLite Database**
+   - Lightweight, file-based database
+   - Persistent storage for users and messages
+   - ACID compliance for data integrity
 
-3. **Broadcasting**
-   - One-to-many message distribution
-   - Efficient for group communication
+3. **Password Security**
+   - bcrypt hashing for secure password storage
+   - Salt rounds for additional security
+   - Never store plain-text passwords
+
+4. **Enhanced WebSocket Protocol**
+   - Message types for different operations
+   - Structured JSON communication
+   - Authentication state management
 
 ### File Structure
 
 ```
 broadcast-server/
-├── package.json          # Project configuration and dependencies
-├── README.md            # This file
-├── example.js           # Comprehensive testing examples
-├── .gitignore           # Git ignore rules
+├── package.json              # Project configuration and dependencies
+├── README.md                # This file
+├── example-enhanced.js      # Enhanced testing examples
+├── .gitignore               # Git ignore rules
 ├── bin/
-│   └── broadcast-server # CLI executable
+│   └── broadcast-server     # CLI executable
+├── data/                    # Database files (created automatically)
+│   └── broadcast.db         # SQLite database
 └── src/
-    ├── server.js        # WebSocket server implementation
-    ├── client.js        # WebSocket client implementation
-    └── cli.js          # Command-line interface
+    ├── server.js            # Enhanced WebSocket server
+    ├── client.js            # Enhanced WebSocket client
+    ├── cli.js              # Enhanced command-line interface
+    ├── auth/
+    │   └── authService.js   # Authentication service
+    └── database/
+        ├── database.js      # Database manager
+        └── init.js          # Database initialization
 ```
 
-### Key Files Explained
+### Database Schema
 
-1. **`example.js`** - Comprehensive testing suite
-   - Demonstrates single client, multi-client, and join/leave scenarios
-   - Shows real-time broadcasting in action
-   - Includes custom message handling examples
-   - Perfect for learning how the system works
+**Users Table:**
+- `id` - Unique user identifier
+- `username` - Unique username
+- `password_hash` - Hashed password
+- `email` - User email (optional)
+- `display_name` - User display name
+- `is_online` - Online status
+- `last_seen` - Last activity timestamp
+- `created_at` - Account creation time
+- `updated_at` - Last update time
 
-2. **`src/server.js`** - WebSocket server implementation
-   - Handles client connections and disconnections
-   - Manages message broadcasting
-   - Maintains client list and connection state
+**Messages Table:**
+- `id` - Unique message identifier
+- `sender_id` - User who sent the message
+- `content` - Message text content
+- `message_type` - Type of message
+- `room_id` - Chat room identifier
+- `timestamp` - When message was sent
+- `is_edited` - Whether message was edited
+- `is_deleted` - Whether message was deleted
 
-3. **`src/client.js`** - WebSocket client implementation
-   - Connects to the broadcast server
-   - Sends and receives messages
-   - Provides interactive command-line interface
-
-4. **`src/cli.js`** - Command-line interface
-   - Parses user commands (`start`, `connect`)
-   - Handles command-line options (port, server URL)
-   - Routes to appropriate server or client functionality
+**User Sessions Table:**
+- `id` - Unique session identifier
+- `user_id` - Associated user
+- `token_hash` - Hashed JWT token
+- `expires_at` - Token expiration time
+- `created_at` - Session creation time
 
 ## 🚀 Next Steps
 
-Once you understand this basic broadcast server, you could extend it with:
+Once you understand this enhanced broadcast server, you could extend it with:
 
-- **User authentication** - Login/logout system
-- **Message history** - Store and retrieve old messages
-- **Private messaging** - Direct messages between users
-- **File sharing** - Send images, documents, etc.
-- **Web interface** - Browser-based client
-- **Database integration** - Persistent message storage
+- **Room/Channel System** - Multiple chat rooms with different permissions
+- **File Sharing** - Send images, documents, and other files
+- **Message Reactions** - Emoji responses and reactions
+- **Message Editing/Deletion** - Modify or remove sent messages
+- **User Roles** - Admin, moderator, and user permissions
+- **Web Interface** - Browser-based client with modern UI
+- **Mobile App** - React Native or Flutter mobile client
+- **API Endpoints** - REST API for external integrations
+- **Real-time Notifications** - Push notifications and email alerts
+- **Message Search** - Full-text search through message history
 
 ## 📖 Learning Resources
 
 - [WebSocket Protocol](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API)
+- [JWT Authentication](https://jwt.io/introduction)
+- [SQLite Database](https://www.sqlite.org/docs.html)
 - [Node.js Documentation](https://nodejs.org/docs/)
-- [Event-driven Programming](https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick/)
+- [bcrypt Password Hashing](https://en.wikipedia.org/wiki/Bcrypt)
 
 ## 🤝 Contributing
 
 Feel free to improve this project! Some ideas:
-- Add more features
-- Improve error handling
-- Add tests
-- Enhance documentation
+- Add more authentication features (OAuth, 2FA)
+- Implement message encryption
+- Add user avatar and profile management
+- Create a web-based admin dashboard
+- Add automated testing suite
+- Enhance error handling and logging
 
 ## 📄 License
 
@@ -376,6 +514,6 @@ This project is open source and available under the MIT License.
 
 ---
 
-**Happy coding! 🎉**
+**Happy coding with enhanced security! 🔐✨**
 
 If you have questions or run into issues, feel free to ask for help! 
