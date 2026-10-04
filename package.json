@@ -22,14 +22,14 @@
   "author": "Shrihari",
   "license": "MIT",
   "dependencies": {
-    "ws": "^8.14.2",
-    "commander": "^11.1.0",
     "bcryptjs": "^2.4.3",
+    "commander": "^11.1.0",
     "jsonwebtoken": "^9.0.2",
     "sqlite3": "^5.1.6",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "ws": "^8.22.0"
   },
   "engines": {
     "node": ">=14.0.0"
   }
-} 
+}
