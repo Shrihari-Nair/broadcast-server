@@ -26,6 +26,7 @@
 
 // Import the WebSocket library
 const WebSocket = require('ws');
+const MAX_MESSAGE_LENGTH = 1000;
 const AuthService = require('./auth/authService.js');
 const DatabaseManager = require('./database/database.js');
 
@@ -204,7 +205,19 @@ class BroadcastServer {
             
             const clientInfo = this.clients.get(ws);
             
-            // Handle different message types
+            // Reject broadcast messages longer than MAX_MESSAGE_LENGTH
+        if (message.type === 'broadcast' && message.content && message.content.length > MAX_MESSAGE_LENGTH) {
+            const errorMessage = {
+                type: 'error',
+                content: `Message too long. Maximum allowed length is ${MAX_MESSAGE_LENGTH} characters.`,
+                timestamp: new Date().toISOString()
+            };
+            ws.send(JSON.stringify(errorMessage));
+            console.warn(`⚠️ Rejected broadcast message from ${clientInfo.username || clientId} due to excessive length.`);
+            return; // Stop further processing
+        }
+
+        // Handle different message types
             switch (message.type) {
                 case 'auth':
                     await this.handleAuthentication(ws, message, clientId);
